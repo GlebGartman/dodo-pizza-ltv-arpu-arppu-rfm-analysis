@@ -224,4 +224,4 @@ select
 ```
 
 ### 📊 Результаты когортного анализа ARPPU
-![ARPPU анализ](https://drive.google.com/file/d/1D8UlakIFEfercOGo85q9IiZc5WIIcTAS/view?usp=drive_link)
+![ARPPU анализ](https://drive.google.com/uc?export=view&id=1D8UlakIFEfercOGo85q9IiZc5WIIcTAS)
