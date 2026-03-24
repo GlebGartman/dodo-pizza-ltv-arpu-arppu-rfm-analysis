@@ -339,5 +339,22 @@ RFM as
    ) as RFM
 from metrics
 )
-
 ```
+
+### 📊 Результаты RFM-анализа (Представлена только часть данных)
+![RFM анализ](https://drive.google.com/uc?export=view&id=1PVuanLCBW09DFXrhijLLIKZB4IfaX6MF)
+
+**5. Количество клиентов по сегментам**
+```sql
+kovlo_frm as
+(
+select 
+    rfm,
+    count(card) as kolvo
+from RFM 
+group by 1
+order by 1
+)
+```
+
+![RFM сегменты](https://drive.google.com/uc?export=view&id=1Lpcuyjm88hgV5Y_WUMQcWiNnqjZrIoZz)
