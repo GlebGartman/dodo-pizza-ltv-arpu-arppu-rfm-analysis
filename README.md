@@ -242,3 +242,102 @@ select
 
 - В целом, проблема не в качестве клиентов, а в снижении их количества.
 
+## RFM-анализ клиентской базы
+
+### Описание
+
+RFM-анализ позволяет сегментировать клиентов по давности последней покупки, частоте покупок и сумме трат.
+
+Метод помогает оценить ценность клиентов, выявить VIP сегменты и определить группы для удержания и реактивации.
+
+---
+
+### Параметры анализа
+
+- Клиент — `card`  
+- Метрика — `summ_with_disc`  
+- Показатели:
+  - Recency — дни с последней покупки  
+  - Frequency — количество покупок  
+  - Monetary — сумма покупок  
+
+- Сегментация — по перцентилям (33% и 66%)  
+- Итоговый сегмент — комбинация `R + F + M`  
+
+---
+
+## SQL-реализация
+
+**1. Подготовка данных и расчет дат**
+
+```sql
+WITH date_card AS (
+
+    SELECT 
+        card,
+        MAX(datetime) OVER()::DATE AS last_date,
+        MAX(datetime) OVER(PARTITION BY card)::DATE AS last_date_user,
+        summ_with_disc
+    FROM checks
+    WHERE card LIKE '2000%'
+    ORDER BY datetime
+),
+```
+**2. Расчет RFM-метрик**
+
+```sql
+metrics as 
+(
+select 
+  card,
+  MAX(last_date - last_date_user) as Recency,
+  COUNT(card) as Frequency,
+  SUM(summ_with_disc) as Monetary
+ from date_card
+ group by card
+ ),
+```
+
+**3. Расчет перцентилей**
+
+```sql
+percentiles AS (
+SELECT
+  PERCENTILE_DISC(0.33) WITHIN GROUP (ORDER BY Recency) AS r33,
+  PERCENTILE_DISC(0.66) WITHIN GROUP (ORDER BY Recency) AS r66,
+  PERCENTILE_DISC(0.33) WITHIN GROUP (ORDER BY Frequency) AS f33,
+  PERCENTILE_DISC(0.66) WITHIN GROUP (ORDER BY Frequency) AS f66,
+  PERCENTILE_DISC(0.33) WITHIN GROUP (ORDER BY Monetary) AS m33,
+  PERCENTILE_DISC(0.66) WITHIN GROUP (ORDER BY Monetary) AS m66
+FROM metrics
+),
+```
+
+**4. Формирование RFM-сегментов**
+
+```sql
+RFM as 
+(
+ select 
+   card,
+   CONCAT(
+   case
+      when Recency <= (select r33 from percentiles) then 1
+      when Recency <= (select r66 from percentiles) then 2
+      else 3
+   end,
+   case
+      when Frequency <= (select f33 from percentiles) then 3
+      when Frequency <= (select f66 from percentiles) then 2
+      else 1
+   end,   
+   case
+      when Monetary <= (select m33 from percentiles) then 3
+      when Monetary <= (select m66 from percentiles) then 2
+      else 1
+   end
+   ) as RFM
+from metrics
+)
+
+```
